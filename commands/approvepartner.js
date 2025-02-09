@@ -29,16 +29,26 @@ module.exports = {
         application.partnerStatus = 'approved';
         await application.save();
 
-        try {
-            await user.send(`✅ Partnerlik başvurun onaylandı! İşte sunucunun partnerlik metni:\n\`\`\`${application.partnerText}\`\`\``);
-        } catch (error) {
-            console.error(`Kullanıcıya DM atılamadı: ${error}`);
-        }
-
-        // **Sunucunun belirlediği partner kanalını al**
+        // **Sunucunun partnerlik mesajını al**
         const settings = await GuildSettings.findOne({ guildId: serverId });
+        const partnerMessage = settings ? settings.partnerMessage : null;
         const partnerChannel = settings ? interaction.guild.channels.cache.get(settings.partnerChannelId) : null;
 
+        // **Kullanıcıya DM gönder**
+        if (partnerMessage) {
+            try {
+                await user.send(`✅ Partnerlik başvurun onaylandı!\n\n📢 **Sunucu Mesajı:**\n\`\`\`${partnerMessage}\`\`\``);
+            } catch (error) {
+                console.error(`Kullanıcıya DM atılamadı: ${error}`);
+            }
+        } else {
+            return interaction.reply({
+                content: '⚠️ Kullanıcılara gönderilecek partner mesajı ayarlanmamış! Lütfen `/settext` komutunu kullanarak bir mesaj belirleyin.',
+                ephemeral: true,
+            });
+        }
+
+        // **Partnerlik mesajını belirlenen kanala gönder**
         if (partnerChannel) {
             partnerChannel.send(`📢 **Yeni Partner!**\n\`\`\`${application.partnerText}\`\`\``);
         } else {
