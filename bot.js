@@ -23,7 +23,7 @@ async function registerCommands() {
 
     try {
         // Belirli bir sunucuya komutları kaydediyoruz
-        const guild = client.guilds.cache.get('YOUR_GUILD_ID'); // Burada sunucu ID'nizi girin
+        const guild = client.guilds.cache.get('1318153365678587914'); // Burada sunucu ID'nizi girin
         if (guild) {
             await guild.commands.set(commands); // Sunucuda komutları kaydet
             console.log('Slash komutları başarıyla sunucuya kaydedildi.');
