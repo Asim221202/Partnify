@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const Partner = require('../models/Partner');
+const GuildSettings = require('../models/GuildSettings');
 
 module.exports = {
     data: new SlashCommandBuilder()
@@ -7,21 +8,31 @@ module.exports = {
         .setDescription('Bir partnerlik başvurusunu onayla.')
         .addUserOption(option => 
             option.setName('user')
-            .setDescription('Onaylanacak kullanıcıyı seç')
-            .setRequired(true)
-        )
+                .setDescription('Onaylanacak kullanıcıyı seç')
+                .setRequired(true))
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
     async execute(interaction) {
         const user = interaction.options.getUser('user');
-        const serverId = interaction.guild.id;
+        const guildId = interaction.guild.id;
 
-        const application = await Partner.findOne({ userId: user.id, serverId });
+        // Partner başvurusunu bul
+        const application = await Partner.findOne({ userId: user.id, serverId: guildId });
 
         if (!application || application.partnerStatus !== 'pending') {
             return interaction.reply({
                 content: '⚠️ Bu kullanıcı için onay bekleyen bir başvuru bulunamadı!',
-                ephemeral: true,
+                ephemeral: true
+            });
+        }
+
+        // Partner kanalını MongoDB'den al
+        const settings = await GuildSettings.findOne({ guildId });
+
+        if (!settings || !settings.partnerChannelId) {
+            return interaction.reply({
+                content: '⚠️ Partner kanalı ayarlanmadı! Lütfen `/setchannel` ile ayarlayın.',
+                ephemeral: true
             });
         }
 
@@ -34,11 +45,7 @@ module.exports = {
             console.error(`Kullanıcıya DM atılamadı: ${error}`);
         }
 
-        const partnerChannel = interaction.guild.channels.cache.find(ch => ch.name === 'partners');
+        // Partner mesajını belirtilen kanala gönder
+        const partnerChannel = interaction.guild.channels.cache.get(settings.partnerChannelId);
         if (partnerChannel) {
-            partnerChannel.send(`📢 **Yeni Partner!**\n\`\`\`${application.partnerText}\`\`\``);
-        }
-
-        await interaction.reply({ content: `✅ ${user.tag} adlı kullanıcının partnerliği onaylandı!`, ephemeral: true });
-    }
-};
+            partnerChannel.send(`📢 **Yeni Partner!**
